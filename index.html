@@ -1,0 +1,632 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Paper Betting Tracker</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #0e0e0e;
+      --surface: #161616;
+      --surface2: #1e1e1e;
+      --border: rgba(255,255,255,0.08);
+      --border2: rgba(255,255,255,0.15);
+      --text: #f0ede8;
+      --muted: #888;
+      --faint: #444;
+      --green: #4ade80;
+      --green-bg: rgba(74,222,128,0.08);
+      --red: #f87171;
+      --red-bg: rgba(248,113,113,0.08);
+      --amber: #fbbf24;
+      --amber-bg: rgba(251,191,36,0.08);
+      --mono: 'IBM Plex Mono', monospace;
+      --sans: 'IBM Plex Sans', sans-serif;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--sans);
+      font-size: 14px;
+      line-height: 1.5;
+      min-height: 100vh;
+    }
+
+    header {
+      border-bottom: 1px solid var(--border);
+      padding: 1.25rem 2rem;
+      display: flex;
+      align-items: baseline;
+      gap: 1rem;
+    }
+
+    header h1 {
+      font-family: var(--mono);
+      font-size: 15px;
+      font-weight: 500;
+      letter-spacing: 0.02em;
+      color: var(--text);
+    }
+
+    header span {
+      font-family: var(--mono);
+      font-size: 11px;
+      color: var(--muted);
+    }
+
+    main { max-width: 1100px; margin: 0 auto; padding: 2rem; }
+
+    .metrics {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 1px;
+      background: var(--border);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      overflow: hidden;
+      margin-bottom: 2rem;
+    }
+
+    .metric {
+      background: var(--surface);
+      padding: 1.25rem 1.5rem;
+    }
+
+    .metric-label {
+      font-family: var(--mono);
+      font-size: 10px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 0.5rem;
+    }
+
+    .metric-value {
+      font-family: var(--mono);
+      font-size: 28px;
+      font-weight: 500;
+      color: var(--text);
+    }
+
+    .metric-value.pos { color: var(--green); }
+    .metric-value.neg { color: var(--red); }
+    .metric-value.warn { color: var(--amber); }
+
+    .metric-sub {
+      font-size: 11px;
+      color: var(--muted);
+      margin-top: 0.25rem;
+    }
+
+    .panel {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      margin-bottom: 1.5rem;
+    }
+
+    .panel-header {
+      padding: 1rem 1.5rem;
+      border-bottom: 1px solid var(--border);
+      font-family: var(--mono);
+      font-size: 11px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--muted);
+    }
+
+    .panel-body { padding: 1.5rem; }
+
+    .form-row {
+      display: grid;
+      gap: 12px;
+      margin-bottom: 12px;
+    }
+
+    .form-row.cols-2 { grid-template-columns: 1fr 1fr; }
+    .form-row.cols-3 { grid-template-columns: 1fr 1fr 1fr; }
+    .form-row.cols-4 { grid-template-columns: 1fr 1fr 1fr 1fr; }
+    .form-row.cols-5 { grid-template-columns: 2fr 1fr 1fr 1fr 1fr; }
+
+    .field label {
+      display: block;
+      font-family: var(--mono);
+      font-size: 10px;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 6px;
+    }
+
+    input, select {
+      width: 100%;
+      background: var(--surface2);
+      border: 1px solid var(--border2);
+      border-radius: 4px;
+      color: var(--text);
+      font-family: var(--mono);
+      font-size: 13px;
+      padding: 8px 10px;
+      outline: none;
+      transition: border-color 0.15s;
+      appearance: none;
+      -webkit-appearance: none;
+    }
+
+    input:focus, select:focus { border-color: rgba(255,255,255,0.35); }
+    input::placeholder { color: var(--faint); }
+
+    select option { background: #1e1e1e; }
+
+    .result-row {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 12px;
+    }
+
+    .result-row label {
+      font-family: var(--mono);
+      font-size: 10px;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: var(--muted);
+      display: block;
+      margin-bottom: 6px;
+    }
+
+    .result-btns { display: flex; gap: 6px; }
+
+    .rbtn {
+      flex: 1;
+      padding: 8px;
+      border: 1px solid var(--border2);
+      border-radius: 4px;
+      background: var(--surface2);
+      color: var(--muted);
+      font-family: var(--mono);
+      font-size: 11px;
+      cursor: pointer;
+      transition: all 0.15s;
+      text-align: center;
+    }
+
+    .rbtn:hover { border-color: rgba(255,255,255,0.3); color: var(--text); }
+    .rbtn.r-pending.active { background: var(--amber-bg); border-color: var(--amber); color: var(--amber); }
+    .rbtn.r-won.active { background: var(--green-bg); border-color: var(--green); color: var(--green); }
+    .rbtn.r-lost.active { background: var(--red-bg); border-color: var(--red); color: var(--red); }
+    .rbtn.r-void.active { background: rgba(255,255,255,0.04); border-color: var(--faint); color: var(--muted); }
+
+    .btn-primary {
+      background: var(--text);
+      color: var(--bg);
+      border: none;
+      border-radius: 4px;
+      font-family: var(--mono);
+      font-size: 12px;
+      font-weight: 500;
+      padding: 10px 20px;
+      cursor: pointer;
+      transition: opacity 0.15s;
+    }
+
+    .btn-primary:hover { opacity: 0.85; }
+
+    .btn-ghost {
+      background: transparent;
+      color: var(--muted);
+      border: 1px solid var(--border2);
+      border-radius: 4px;
+      font-family: var(--mono);
+      font-size: 12px;
+      padding: 10px 16px;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+
+    .btn-ghost:hover { color: var(--text); border-color: rgba(255,255,255,0.3); }
+
+    .btn-row { display: flex; gap: 8px; align-items: center; margin-top: 4px; }
+
+    .err {
+      font-family: var(--mono);
+      font-size: 11px;
+      color: var(--red);
+      margin-top: 8px;
+      display: none;
+    }
+
+    .table-wrap { overflow-x: auto; }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 12px;
+    }
+
+    thead tr {
+      border-bottom: 1px solid var(--border2);
+    }
+
+    thead th {
+      font-family: var(--mono);
+      font-size: 10px;
+      letter-spacing: 0.07em;
+      text-transform: uppercase;
+      color: var(--muted);
+      text-align: left;
+      padding: 10px 12px;
+      font-weight: 400;
+    }
+
+    tbody tr {
+      border-bottom: 1px solid var(--border);
+      transition: background 0.1s;
+    }
+
+    tbody tr:hover { background: var(--surface2); }
+    tbody tr:last-child { border-bottom: none; }
+
+    td {
+      padding: 11px 12px;
+      vertical-align: middle;
+    }
+
+    .td-match { font-weight: 500; color: var(--text); }
+    .td-sub { font-size: 11px; color: var(--muted); margin-top: 2px; font-family: var(--mono); }
+    .td-mono { font-family: var(--mono); }
+
+    .badge {
+      display: inline-block;
+      font-family: var(--mono);
+      font-size: 10px;
+      padding: 2px 8px;
+      border-radius: 3px;
+      letter-spacing: 0.04em;
+    }
+
+    .badge-won { background: var(--green-bg); color: var(--green); border: 1px solid rgba(74,222,128,0.2); }
+    .badge-lost { background: var(--red-bg); color: var(--red); border: 1px solid rgba(248,113,113,0.2); }
+    .badge-pending { background: var(--amber-bg); color: var(--amber); border: 1px solid rgba(251,191,36,0.2); }
+    .badge-void { background: rgba(255,255,255,0.04); color: var(--muted); border: 1px solid var(--border2); }
+    .badge-home { background: rgba(99,153,34,0.12); color: #97C459; border: 1px solid rgba(99,153,34,0.2); }
+    .badge-draw { background: rgba(55,138,221,0.12); color: #85B7EB; border: 1px solid rgba(55,138,221,0.2); }
+    .badge-away { background: rgba(186,117,23,0.12); color: #EF9F27; border: 1px solid rgba(186,117,23,0.2); }
+
+    .pos { color: var(--green); }
+    .neg { color: var(--red); }
+    .muted { color: var(--muted); }
+
+    .del-btn {
+      background: none;
+      border: none;
+      color: var(--faint);
+      cursor: pointer;
+      font-family: var(--mono);
+      font-size: 11px;
+      padding: 4px 6px;
+      border-radius: 3px;
+      transition: all 0.15s;
+    }
+
+    .del-btn:hover { color: var(--red); background: var(--red-bg); }
+
+    .empty-state {
+      text-align: center;
+      padding: 3rem;
+      font-family: var(--mono);
+      font-size: 12px;
+      color: var(--faint);
+    }
+
+    .clv-note {
+      margin-top: 1rem;
+      padding: 1rem 1.25rem;
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      font-size: 12px;
+      color: var(--muted);
+      line-height: 1.7;
+      font-family: var(--mono);
+      display: none;
+    }
+
+    .clv-note strong { color: var(--text); }
+
+    @media (max-width: 700px) {
+      main { padding: 1rem; }
+      .metrics { grid-template-columns: repeat(2, 1fr); }
+      .form-row.cols-4, .form-row.cols-5, .form-row.cols-3 { grid-template-columns: 1fr 1fr; }
+      .form-row.cols-2 { grid-template-columns: 1fr; }
+      header { padding: 1rem; }
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <h1>paper_betting_tracker</h1>
+  <span>model performance monitor</span>
+</header>
+
+<main>
+
+  <div class="metrics">
+    <div class="metric">
+      <div class="metric-label">Total bets</div>
+      <div class="metric-value" id="m-total">0</div>
+      <div class="metric-sub" id="m-settled">0 settled</div>
+    </div>
+    <div class="metric">
+      <div class="metric-label">Net P&amp;L</div>
+      <div class="metric-value" id="m-pnl">£0.00</div>
+      <div class="metric-sub" id="m-roi">0.00% ROI</div>
+    </div>
+    <div class="metric">
+      <div class="metric-label">CLV positive rate</div>
+      <div class="metric-value" id="m-clv">—</div>
+      <div class="metric-sub">target: 54%+</div>
+    </div>
+    <div class="metric">
+      <div class="metric-label">Win rate</div>
+      <div class="metric-value" id="m-win">—</div>
+      <div class="metric-sub" id="m-avgodds">avg odds —</div>
+    </div>
+  </div>
+
+  <div class="panel">
+    <div class="panel-header">Log a bet</div>
+    <div class="panel-body">
+
+      <div class="form-row cols-5">
+        <div class="field"><label>Match</label><input id="f-match" type="text" placeholder="Sunderland vs Nottm Forest"></div>
+        <div class="field"><label>Date</label><input id="f-date" type="date"></div>
+        <div class="field"><label>League</label><select id="f-league">
+          <option>Premier League</option>
+          <option>Championship</option>
+          <option>Bundesliga</option>
+          <option>La Liga</option>
+          <option>Eredivisie</option>
+          <option>Brasileirao</option>
+          <option>Argentina</option>
+          <option>Champions League</option>
+        </select></div>
+        <div class="field"><label>Selection</label><select id="f-sel">
+          <option value="home">Home</option>
+          <option value="draw">Draw</option>
+          <option value="away">Away</option>
+        </select></div>
+        <div class="field"><label>Odds (decimal)</label><input id="f-odds" type="number" step="0.01" min="1.01" placeholder="3.19"></div>
+      </div>
+
+      <div class="form-row cols-4">
+        <div class="field"><label>Stake (£)</label><input id="f-stake" type="number" step="0.50" min="0.5" placeholder="5.50"></div>
+        <div class="field"><label>Model prob (%)</label><input id="f-mprob" type="number" step="0.1" placeholder="40.8"></div>
+        <div class="field"><label>Pinnacle implied (%)</label><input id="f-pprob" type="number" step="0.1" placeholder="30.5"></div>
+        <div class="field"><label>Edge (%)</label><input id="f-edge" type="number" step="0.1" placeholder="10.3"></div>
+      </div>
+
+      <div class="form-row cols-2">
+        <div class="field">
+          <label>Result</label>
+          <div class="result-btns">
+            <button class="rbtn r-pending active" onclick="setResult('pending')">Pending</button>
+            <button class="rbtn r-won" onclick="setResult('won')">Won</button>
+            <button class="rbtn r-lost" onclick="setResult('lost')">Lost</button>
+            <button class="rbtn r-void" onclick="setResult('void')">Void</button>
+          </div>
+        </div>
+        <div class="field">
+          <label>Pinnacle closing odds (for CLV — fill after kickoff)</label>
+          <input id="f-close" type="number" step="0.01" min="1.01" placeholder="e.g. 2.95 — leave blank if pending">
+        </div>
+      </div>
+
+      <div class="btn-row">
+        <button class="btn-primary" onclick="addBet()">Add bet</button>
+        <button class="btn-ghost" onclick="exportCSV()">Export CSV</button>
+        <button class="btn-ghost" onclick="clearAll()">Clear all</button>
+      </div>
+      <div class="err" id="err"></div>
+
+    </div>
+  </div>
+
+  <div class="panel">
+    <div class="panel-header">Bet log</div>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Match</th>
+            <th>Selection</th>
+            <th>Odds</th>
+            <th>Stake</th>
+            <th>Edge</th>
+            <th>CLV</th>
+            <th>Result</th>
+            <th>P&amp;L</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody id="bet-tbody"></tbody>
+      </table>
+      <div class="empty-state" id="empty-state">No bets logged yet. Add your first bet above.</div>
+    </div>
+  </div>
+
+  <div class="clv-note" id="clv-note">
+    <strong>CLV (closing line value)</strong> — your odds vs Pinnacle's closing price. Positive CLV means you got on at a better price than the sharpest market settled at. This is the most reliable indicator of long-term edge, independent of short-term results. <strong>Target: 54%+ of settled bets with positive CLV over 200+ bets.</strong>
+  </div>
+
+</main>
+
+<script>
+  const STORAGE_KEY = 'pbtracker_bets_v1';
+  let bets = [];
+  let resultState = 'pending';
+
+  function load() {
+    try { bets = JSON.parse(localStorage.getItem(STORAGE_KEY)) || []; } catch(e) { bets = []; }
+  }
+
+  function save() {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(bets));
+  }
+
+  function setResult(r) {
+    resultState = r;
+    document.querySelectorAll('.rbtn').forEach(b => b.classList.remove('active'));
+    document.querySelector('.r-'+r).classList.add('active');
+  }
+
+  function showErr(msg) {
+    const e = document.getElementById('err');
+    e.textContent = msg; e.style.display = 'block';
+    setTimeout(() => e.style.display = 'none', 3000);
+  }
+
+  function addBet() {
+    const match  = document.getElementById('f-match').value.trim();
+    const date   = document.getElementById('f-date').value;
+    const league = document.getElementById('f-league').value;
+    const sel    = document.getElementById('f-sel').value;
+    const odds   = parseFloat(document.getElementById('f-odds').value);
+    const stake  = parseFloat(document.getElementById('f-stake').value);
+    const mprob  = parseFloat(document.getElementById('f-mprob').value);
+    const pprob  = parseFloat(document.getElementById('f-pprob').value);
+    const edge   = parseFloat(document.getElementById('f-edge').value);
+    const close  = parseFloat(document.getElementById('f-close').value) || null;
+
+    if (!match)              return showErr('Enter a match name');
+    if (!date)               return showErr('Enter a date');
+    if (isNaN(odds)||odds<1) return showErr('Enter valid decimal odds');
+    if (isNaN(stake)||stake<=0) return showErr('Enter a valid stake');
+
+    const clv = close ? parseFloat(((odds / close - 1) * 100).toFixed(2)) : null;
+    const pnl = resultState === 'won'  ? parseFloat((stake * (odds - 1)).toFixed(2))
+              : resultState === 'lost' ? parseFloat((-stake).toFixed(2))
+              : resultState === 'void' ? 0 : null;
+
+    bets.push({ id: Date.now(), match, date, league, sel, odds, stake, mprob, pprob, edge, close, clv, result: resultState, pnl });
+    save();
+
+    ['f-match','f-odds','f-stake','f-mprob','f-pprob','f-edge','f-close'].forEach(id => document.getElementById(id).value = '');
+    setResult('pending');
+    render();
+  }
+
+  function deleteBet(id) {
+    bets = bets.filter(b => b.id !== id);
+    save(); render();
+  }
+
+  function clearAll() {
+    if (bets.length && !confirm('Clear all bets? This cannot be undone.')) return;
+    bets = []; save(); render();
+  }
+
+  function exportCSV() {
+    if (!bets.length) return;
+    const headers = ['Date','Match','League','Selection','Odds','Stake','Model%','Pinnacle%','Edge%','ClosingOdds','CLV%','Result','PnL'];
+    const rows = bets.map(b => [
+      b.date, b.match, b.league, b.sel,
+      b.odds, b.stake,
+      isNaN(b.mprob)?'':b.mprob, isNaN(b.pprob)?'':b.pprob, isNaN(b.edge)?'':b.edge,
+      b.close||'', b.clv!==null?b.clv:'',
+      b.result, b.pnl!==null?b.pnl:''
+    ]);
+    const csv = [headers, ...rows].map(r => r.join(',')).join('\n');
+    const a = document.createElement('a');
+    a.href = 'data:text/csv;charset=utf-8,' + encodeURIComponent(csv);
+    a.download = 'bets_' + new Date().toISOString().split('T')[0] + '.csv';
+    a.click();
+  }
+
+  function fmt(n, dp=2) { return (isNaN(n)||n===null||n===undefined) ? '—' : Number(n).toFixed(dp); }
+
+  function render() {
+    const settled  = bets.filter(b => b.result === 'won' || b.result === 'lost');
+    const won      = bets.filter(b => b.result === 'won');
+    const clvBets  = bets.filter(b => b.clv !== null);
+    const clvPos   = clvBets.filter(b => b.clv > 0);
+    const totalPnl = settled.reduce((s, b) => s + b.pnl, 0);
+    const totalStaked = settled.reduce((s, b) => s + b.stake, 0);
+    const roi = totalStaked > 0 ? (totalPnl / totalStaked * 100) : 0;
+    const avgOdds = bets.length ? bets.reduce((s,b)=>s+b.odds,0)/bets.length : 0;
+    const clvRate = clvBets.length ? Math.round(clvPos.length / clvBets.length * 100) : null;
+    const winRate = settled.length ? Math.round(won.length / settled.length * 100) : null;
+
+    const mTotal   = document.getElementById('m-total');
+    const mSettled = document.getElementById('m-settled');
+    const mPnl     = document.getElementById('m-pnl');
+    const mRoi     = document.getElementById('m-roi');
+    const mClv     = document.getElementById('m-clv');
+    const mWin     = document.getElementById('m-win');
+    const mAvg     = document.getElementById('m-avgodds');
+
+    mTotal.textContent = bets.length;
+    mSettled.textContent = settled.length + ' settled';
+    mPnl.textContent = (totalPnl >= 0 ? '+' : '') + '£' + Math.abs(totalPnl).toFixed(2);
+    mPnl.className = 'metric-value ' + (totalPnl > 0 ? 'pos' : totalPnl < 0 ? 'neg' : '');
+    mRoi.textContent = (roi >= 0 ? '+' : '') + roi.toFixed(2) + '% ROI';
+    mClv.textContent = clvRate !== null ? clvRate + '%' : '—';
+    mClv.className = 'metric-value ' + (clvRate === null ? '' : clvRate >= 54 ? 'pos' : clvRate >= 45 ? 'warn' : 'neg');
+    mWin.textContent = winRate !== null ? winRate + '%' : '—';
+    mWin.className = 'metric-value';
+    mAvg.textContent = bets.length ? 'avg odds ' + avgOdds.toFixed(2) : 'avg odds —';
+
+    const tbody = document.getElementById('bet-tbody');
+    const empty = document.getElementById('empty-state');
+    const clvNote = document.getElementById('clv-note');
+
+    if (!bets.length) {
+      tbody.innerHTML = '';
+      empty.style.display = 'block';
+      clvNote.style.display = 'none';
+      return;
+    }
+
+    empty.style.display = 'none';
+    clvNote.style.display = 'block';
+
+    const selLabel = { home: 'Home', draw: 'Draw', away: 'Away' };
+
+    tbody.innerHTML = [...bets].reverse().map(b => {
+      const clvStr = b.clv !== null
+        ? `<span class="${b.clv > 0 ? 'pos' : b.clv < 0 ? 'neg' : 'muted'}">${b.clv >= 0 ? '+' : ''}${b.clv.toFixed(1)}%</span>`
+        : '<span class="muted">—</span>';
+
+      const pnlStr = b.pnl !== null
+        ? `<span class="${b.pnl > 0 ? 'pos' : b.pnl < 0 ? 'neg' : 'muted'}">${b.pnl >= 0 ? '+' : ''}£${Math.abs(b.pnl).toFixed(2)}</span>`
+        : '<span class="muted">pending</span>';
+
+      const edgeStr = (!isNaN(b.edge) && b.edge !== null && b.edge !== '')
+        ? `<span class="pos">+${Number(b.edge).toFixed(1)}%</span>`
+        : '<span class="muted">—</span>';
+
+      return `<tr>
+        <td><div class="td-match">${b.match}</div><div class="td-sub">${b.date} · ${b.league}</div></td>
+        <td><span class="badge badge-${b.sel}">${selLabel[b.sel]}</span></td>
+        <td class="td-mono">${fmt(b.odds, 2)}</td>
+        <td class="td-mono">£${fmt(b.stake, 2)}</td>
+        <td>${edgeStr}</td>
+        <td>${clvStr}</td>
+        <td><span class="badge badge-${b.result}">${b.result}</span></td>
+        <td>${pnlStr}</td>
+        <td><button class="del-btn" onclick="deleteBet(${b.id})">×</button></td>
+      </tr>`;
+    }).join('');
+  }
+
+  document.getElementById('f-date').value = new Date().toISOString().split('T')[0];
+  load();
+  render();
+</script>
+
+</body>
+</html>
