@@ -360,7 +360,9 @@
     'Content-Type': 'application/json',
     'apikey': SB_KEY,
     'Authorization': 'Bearer ' + SB_KEY,
-    'Prefer': 'return=representation'
+    'Prefer': 'return=representation',
+    'Accept-Profile': 'sportsbet',
+    'Content-Profile': 'sportsbet'
   };
 
   // League ID mapping (Sportmonks league_id)
@@ -464,8 +466,8 @@
       const leagueId = LEAGUE_IDS[league];
       // Get fixture_ids for this league using same schema routing as rest of app
       const fixtureResp = await fetch(
-        `${SB_URL}/rest/v1/fixtures?schema=sportsbet&select=fixture_id&league_id=eq.${leagueId}&state_id=eq.5&starting_at=gte.2023-01-01&limit=2000`,
-        { headers: { 'apikey': SB_KEY, 'Authorization': 'Bearer ' + SB_KEY } }
+        `${SB_URL}/rest/v1/fixtures?select=fixture_id&league_id=eq.${leagueId}&state_id=eq.5&starting_at=gte.2023-01-01&limit=2000`,
+        { headers: { 'apikey': SB_KEY, 'Authorization': 'Bearer ' + SB_KEY, 'Accept-Profile': 'sportsbet' } }
       );
       if (!fixtureResp.ok) throw new Error(`Fixtures fetch failed: ${fixtureResp.status}`);
       const fixtures = await fixtureResp.json();
@@ -473,8 +475,8 @@
 
       const fixtureIds = fixtures.map(f => f.fixture_id).join(',');
       const teamResp = await fetch(
-        `${SB_URL}/rest/v1/fixture_participants?schema=sportsbet&select=name&type=eq.domestic&fixture_id=in.(${fixtureIds})&order=name.asc&limit=5000`,
-        { headers: { 'apikey': SB_KEY, 'Authorization': 'Bearer ' + SB_KEY } }
+        `${SB_URL}/rest/v1/fixture_participants?select=name&type=eq.domestic&fixture_id=in.(${fixtureIds})&order=name.asc&limit=5000`,
+        { headers: { 'apikey': SB_KEY, 'Authorization': 'Bearer ' + SB_KEY, 'Accept-Profile': 'sportsbet' } }
       );
       if (!teamResp.ok) throw new Error(`Teams fetch failed: ${teamResp.status}`);
       const teams = await teamResp.json();
@@ -633,7 +635,7 @@
     btn.disabled = true; btn.textContent = 'Saving...';
 
     try {
-      await api('POST', 'paper_bets?schema=sportsbet', {
+      await api('POST', 'paper_bets?', {
         match_date: date, league,
         home_team: home, away_team: away,
         selection: sel, odds_decimal: odds, stake,
@@ -702,7 +704,7 @@
     const btn = document.getElementById('btn-bulk');
     btn.disabled = true; btn.textContent = 'Importing...';
     try {
-      await api('POST', 'paper_bets?schema=sportsbet', bulkParsed);
+      await api('POST', 'paper_bets?', bulkParsed);
       showMsg('bulk-ok', bulkParsed.length + ' bet' + (bulkParsed.length > 1 ? 's' : '') + ' imported successfully', 'ok');
       document.getElementById('bulk-input').value = '';
       document.getElementById('bulk-preview').style.display = 'none';
@@ -722,7 +724,7 @@
     document.getElementById('bets-empty').style.display = 'none';
     document.getElementById('bets-tbody').innerHTML = '';
     try {
-      allBets = await api('GET', 'paper_bets?schema=sportsbet&order=match_date.desc,id.desc&limit=500');
+      allBets = await api('GET', 'paper_bets?order=match_date.desc,id.desc&limit=500');
       const leagues = [...new Set(allBets.map(b => b.league).filter(Boolean))].sort();
       const sel = document.getElementById('filter-league');
       const cur = sel.value;
@@ -773,7 +775,7 @@
 
   async function loadMetrics() {
     try {
-      const bets = await api('GET', 'paper_bets?schema=sportsbet&limit=1000');
+      const bets = await api('GET', 'paper_bets?limit=1000');
       const settled = bets.filter(b => b.result === 'won' || b.result === 'lost');
       const won = bets.filter(b => b.result === 'won');
       const pending = bets.filter(b => b.result === 'pending');
@@ -830,7 +832,7 @@
     const pnl = calcPnl(modalResult, settleStake, settleOdds);
     const clv = calcClv(settleOdds, close);
     try {
-      await api('PATCH', 'paper_bets?schema=sportsbet&id=eq.' + settleId, { result: modalResult, closing_odds: close, clv_pct: clv, pnl });
+      await api('PATCH', 'paper_bets?id=eq.' + settleId, { result: modalResult, closing_odds: close, clv_pct: clv, pnl });
       closeModal();
       await loadBets();
       await loadMetrics();
@@ -845,7 +847,7 @@
   async function deleteBet(id) {
     if (!confirm('Delete this bet?')) return;
     try {
-      await api('DELETE', 'paper_bets?schema=sportsbet&id=eq.'+id);
+      await api('DELETE', 'paper_bets?id=eq.'+id);
       await loadBets();
       await loadMetrics();
     } catch(e) { alert('Error: '+e.message); }
