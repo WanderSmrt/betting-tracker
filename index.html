@@ -464,13 +464,24 @@
 
     try {
       const leagueId = LEAGUE_IDS[league];
-      // Use PostgREST embedded resource filtering to get teams by league
-      // in a single request — avoids passing thousands of fixture IDs in URL
-      const teamResp = await fetch(
-        `${SB_URL}/rest/v1/fixture_participants?select=name&type=eq.domestic&fixtures.league_id=eq.${leagueId}&fixtures.state_id=eq.5&fixtures.starting_at=gte.2023-01-01&order=name.asc&limit=5000`,
+
+      // Step 1: get the 200 most recent fixture IDs for this league
+      // (200 IDs = ~1800 chars in URL — well within browser limits)
+      const fixtureResp = await fetch(
+        `${SB_URL}/rest/v1/fixtures?select=fixture_id&league_id=eq.${leagueId}&state_id=eq.5&order=starting_at.desc&limit=200`,
         { headers: { 'apikey': SB_KEY, 'Authorization': 'Bearer ' + SB_KEY, 'Accept-Profile': 'sportsbet' } }
       );
-      if (!teamResp.ok) throw new Error(`Teams fetch failed: ${teamResp.status}`);
+      if (!fixtureResp.ok) throw new Error(`${fixtureResp.status}`);
+      const fixtures = await fixtureResp.json();
+      if (!Array.isArray(fixtures) || !fixtures.length) { leagueTeams = []; return; }
+
+      // Step 2: get distinct team names for those fixtures
+      const ids = fixtures.map(f => f.fixture_id).join(',');
+      const teamResp = await fetch(
+        `${SB_URL}/rest/v1/fixture_participants?select=name&type=eq.domestic&fixture_id=in.(${ids})&order=name.asc`,
+        { headers: { 'apikey': SB_KEY, 'Authorization': 'Bearer ' + SB_KEY, 'Accept-Profile': 'sportsbet' } }
+      );
+      if (!teamResp.ok) throw new Error(`${teamResp.status}`);
       const teams = await teamResp.json();
       leagueTeams = [...new Set(teams.map(t => t.name).filter(Boolean))].sort();
     } catch(e) {
