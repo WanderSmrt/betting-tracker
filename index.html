@@ -462,20 +462,21 @@
 
     try {
       const leagueId = LEAGUE_IDS[league];
-      // Get fixture_ids for this league (recent 3 seasons, completed)
+      // Get fixture_ids for this league using same schema routing as rest of app
       const fixtureResp = await fetch(
-        `${SB_URL}/rest/v1/fixtures?select=fixture_id&league_id=eq.${leagueId}&state_id=eq.5&starting_at=gte.2023-01-01&limit=2000`,
-        { headers: { 'apikey': SB_KEY, 'Authorization': 'Bearer ' + SB_KEY, 'Accept-Profile': 'sportsbet' } }
+        `${SB_URL}/rest/v1/fixtures?schema=sportsbet&select=fixture_id&league_id=eq.${leagueId}&state_id=eq.5&starting_at=gte.2023-01-01&limit=2000`,
+        { headers: { 'apikey': SB_KEY, 'Authorization': 'Bearer ' + SB_KEY } }
       );
+      if (!fixtureResp.ok) throw new Error(`Fixtures fetch failed: ${fixtureResp.status}`);
       const fixtures = await fixtureResp.json();
       if (!fixtures.length) { leagueTeams = []; return; }
 
       const fixtureIds = fixtures.map(f => f.fixture_id).join(',');
-      // Get distinct team names from fixture_participants
       const teamResp = await fetch(
-        `${SB_URL}/rest/v1/fixture_participants?select=name&type=eq.domestic&fixture_id=in.(${fixtureIds})&order=name.asc&limit=5000`,
-        { headers: { 'apikey': SB_KEY, 'Authorization': 'Bearer ' + SB_KEY, 'Accept-Profile': 'sportsbet' } }
+        `${SB_URL}/rest/v1/fixture_participants?schema=sportsbet&select=name&type=eq.domestic&fixture_id=in.(${fixtureIds})&order=name.asc&limit=5000`,
+        { headers: { 'apikey': SB_KEY, 'Authorization': 'Bearer ' + SB_KEY } }
       );
+      if (!teamResp.ok) throw new Error(`Teams fetch failed: ${teamResp.status}`);
       const teams = await teamResp.json();
       leagueTeams = [...new Set(teams.map(t => t.name).filter(Boolean))].sort();
     } catch(e) {
