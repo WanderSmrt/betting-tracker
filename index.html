@@ -778,7 +778,7 @@
 
   async function loadMetrics() {
     try {
-      const bets = await api('GET', 'paper_bets?limit=1000');
+      const bets = await api('GET', 'v_track_record_bets?limit=1000');
       const settled = bets.filter(b => b.result === 'won' || b.result === 'lost');
       const won = bets.filter(b => b.result === 'won');
       const pending = bets.filter(b => b.result === 'pending');
